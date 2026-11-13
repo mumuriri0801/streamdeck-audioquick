@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>音源切換</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="status" class="status"></div>
+
+  <div class="row">
+    <div class="label">類型</div>
+    <div class="field">
+      <label class="choice"><input type="radio" name="flow" value="render" checked> 輸出（喇叭／耳機）</label>
+      <label class="choice"><input type="radio" name="flow" value="capture"> 輸入（麥克風）</label>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">切換順序</div>
+    <div class="field">
+      <div id="devices"></div>
+      <button id="add" type="button">＋ 新增裝置</button>
+      <p class="hint">選兩個以上：每按一次依序切到下一個，未連接的裝置會自動跳過。<br>只選一個：按下就直接切到該裝置。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">選項</div>
+    <div class="field stack">
+      <label class="choice"><input type="checkbox" id="setComm" checked> 同時設為「預設通訊裝置」</label>
+      <label class="choice"><input type="checkbox" id="showTitle" checked> 在按鍵上顯示裝置名稱</label>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    'use strict';
+    var ICON_CHOICES = [['', '圖示：自動'], ['speaker', '喇叭'], ['headphones', '耳機'], ['monitor', '螢幕'], ['mic', '麥克風']];
+    var MAX_DEVICES = 8;
+
+    var state = { flow: 'render', devices: [], setComm: true, showTitle: true };
+    var known = { render: [], capture: [] };
+
+    // eslint-disable-next-line no-unused-vars
+    function init(settings) {
+      state.flow = settings.flow === 'capture' ? 'capture' : 'render';
+      state.setComm = settings.setComm !== false;
+      state.showTitle = settings.showTitle !== false;
+      state.devices = (Array.isArray(settings.devices) ? settings.devices : []).map(function (d) {
+        return { name: d.name || '', label: d.label || '', icon: d.icon || '' };
+      });
+      while (state.devices.length < 2) state.devices.push({ name: '', label: '', icon: '' });
+
+      document.querySelector('input[name="flow"][value="' + state.flow + '"]').checked = true;
+      document.getElementById('setComm').checked = state.setComm;
+      document.getElementById('showTitle').checked = state.showTitle;
+      renderDevices();
+    }
+
+    // eslint-disable-next-line no-unused-vars
+    function onDevices(payload) {
+      known.render = payload.render || [];
+      known.capture = payload.capture || [];
+      renderDevices();
+    }
+
+    function save() {
+      saveSettings({
+        flow: state.flow,
+        setComm: state.setComm,
+        showTitle: state.showTitle,
+        devices: state.devices.filter(function (d) { return d.name; }),
+      });
+    }
+
+    function autoLabelFor(name) {
+      var key = nameKey(name);
+      var match = known[state.flow].filter(function (d) { return nameKey(d.name) === key; })[0];
+      return match ? match.label : '';
+    }
+
+    function renderDevices() {
+      // Do not rebuild the list while the user is typing in it.
+      var active = document.activeElement;
+      if (active && active.tagName === 'INPUT' && active.type === 'text') return;
+
+      var container = document.getElementById('devices');
+      container.textContent = '';
+      state.devices.forEach(function (entry, index) {
+        var box = document.createElement('div');
+        box.className = 'device';
+
+        var top = document.createElement('div');
+        top.className = 'top';
+        var number = document.createElement('span');
+        number.className = 'index';
+        number.textContent = String(index + 1);
+        var select = document.createElement('select');
+        fillDeviceSelect(select, known[state.flow], entry.name);
+        select.addEventListener('change', function () {
+          entry.name = select.value;
+          save();
+          renderDevices();
+        });
+        var up = document.createElement('button');
+        up.type = 'button';
+        up.textContent = '↑';
+        up.title = '往前移';
+        up.disabled = index === 0;
+        up.addEventListener('click', function () {
+          state.devices.splice(index - 1, 0, state.devices.splice(index, 1)[0]);
+          save();
+          renderDevices();
+        });
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '✕';
+        remove.title = '移除';
+        remove.addEventListener('click', function () {
+          state.devices.splice(index, 1);
+          if (state.devices.length === 0) state.devices.push({ name: '', label: '', icon: '' });
+          save();
+          renderDevices();
+        });
+        top.appendChild(number);
+        top.appendChild(select);
+        top.appendChild(up);
+        top.appendChild(remove);
+
+        var bottom = document.createElement('div');
+        bottom.className = 'bottom';
+        var label = document.createElement('input');
+        label.type = 'text';
+        label.maxLength = 30;
+        label.value = entry.label;
+        label.placeholder = '按鍵顯示名稱' + (autoLabelFor(entry.name) ? '（預設：' + autoLabelFor(entry.name) + '）' : '（留空＝自動）');
+        label.addEventListener('input', function () {
+          entry.label = label.value;
+          save();
+        });
+        var icon = document.createElement('select');
+        ICON_CHOICES.forEach(function (choice) {
+          var option = document.createElement('option');
+          option.value = choice[0];
+          option.textContent = choice[1];
+          option.selected = entry.icon === choice[0];
+          icon.appendChild(option);
+        });
+        icon.addEventListener('change', function () {
+          entry.icon = icon.value;
+          save();
+        });
+        bottom.appendChild(label);
+        bottom.appendChild(icon);
+
+        box.appendChild(top);
+        box.appendChild(bottom);
+        container.appendChild(box);
+      });
+      document.getElementById('add').disabled = state.devices.length >= MAX_DEVICES;
+    }
+
+    document.getElementById('add').addEventListener('click', function () {
+      if (state.devices.length >= MAX_DEVICES) return;
+      state.devices.push({ name: '', label: '', icon: '' });
+      renderDevices();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="flow"]'), function (radio) {
+      radio.addEventListener('change', function () {
+        if (!radio.checked || state.flow === radio.value) return;
+        state.flow = radio.value;
+        // Output and input devices are different lists, so start over.
+        state.devices = [{ name: '', label: '', icon: '' }, { name: '', label: '', icon: '' }];
+        save();
+        renderDevices();
+      });
+    });
+    document.getElementById('setComm').addEventListener('change', function (event) {
+      state.setComm = event.target.checked;
+      save();
+    });
+    document.getElementById('showTitle').addEventListener('change', function (event) {
+      state.showTitle = event.target.checked;
+      save();
+    });
+  </script>
+</body>
+</html>

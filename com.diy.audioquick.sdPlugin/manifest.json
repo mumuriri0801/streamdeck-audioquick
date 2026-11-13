@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "AudioQuick 音訊快切",
+  "Version": "1.0.1.0",
+  "Author": "DIY",
+  "Description": "以裝置名稱（而非裝置 ID）切換 Windows 預設音訊裝置，以及切換麥克風靜音。裝置被 Windows 重新辨識後設定也不會失效。",
+  "Category": "AudioQuick 音訊快切",
+  "CategoryIcon": "imgs/plugin/category",
+  "Icon": "imgs/plugin/icon",
+  "UUID": "com.diy.audioquick",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.4"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20"
+  },
+  "Actions": [
+    {
+      "Name": "音源切換",
+      "UUID": "com.diy.audioquick.switch",
+      "Icon": "imgs/actions/switch",
+      "Tooltip": "在指定的音訊裝置之間切換（只選一個裝置時為直接切到該裝置）",
+      "PropertyInspectorPath": "ui/switch.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/keys/speaker-on",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        }
+      ]
+    },
+    {
+      "Name": "麥克風靜音",
+      "UUID": "com.diy.audioquick.micmute",
+      "Icon": "imgs/actions/micmute",
+      "Tooltip": "切換麥克風的啟用／靜音",
+      "PropertyInspectorPath": "ui/micmute.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "啟用",
+          "Image": "imgs/keys/micstate-live",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        },
+        {
+          "Name": "靜音",
+          "Image": "imgs/keys/micstate-muted",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        }
+      ]
+    }
+  ]
+}

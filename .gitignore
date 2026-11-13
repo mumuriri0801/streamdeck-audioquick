@@ -1,0 +1,6 @@
+node_modules/
+dist/
+build/*.png
+build/*.exe
+com.diy.audioquick.sdPlugin/logs/
+com.diy.audioquick.sdPlugin/host/*.exe

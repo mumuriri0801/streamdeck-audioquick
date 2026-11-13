@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>麥克風靜音</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="status" class="status"></div>
+
+  <div class="row">
+    <div class="label">控制對象</div>
+    <div class="field">
+      <select id="target">
+        <option value="default">系統預設麥克風</option>
+        <option value="communications">預設通訊麥克風</option>
+        <option value="all">全部麥克風</option>
+        <option value="device">指定裝置…</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row" id="deviceRow" hidden>
+    <div class="label">裝置</div>
+    <div class="field">
+      <select id="device"></select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label"></div>
+    <div class="field">
+      <p class="hint">按一下在「啟用」與「靜音」之間切換。按鍵會跟著系統實際狀態更新，從其他地方靜音也會同步。</p>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    'use strict';
+    var state = { target: 'default', name: '' };
+    var capture = [];
+
+    // eslint-disable-next-line no-unused-vars
+    function init(settings) {
+      var allowed = ['default', 'communications', 'all', 'device'];
+      state.target = allowed.indexOf(settings.target) >= 0 ? settings.target : 'default';
+      state.name = settings.name || '';
+      document.getElementById('target').value = state.target;
+      render();
+    }
+
+    // eslint-disable-next-line no-unused-vars
+    function onDevices(payload) {
+      capture = payload.capture || [];
+      render();
+    }
+
+    function render() {
+      document.getElementById('deviceRow').hidden = state.target !== 'device';
+      fillDeviceSelect(document.getElementById('device'), capture, state.name);
+    }
+
+    function save() {
+      saveSettings({ target: state.target, name: state.name });
+    }
+
+    document.getElementById('target').addEventListener('change', function (event) {
+      state.target = event.target.value;
+      save();
+      render();
+    });
+    document.getElementById('device').addEventListener('change', function (event) {
+      state.name = event.target.value;
+      save();
+      render();
+    });
+  </script>
+</body>
+</html>
